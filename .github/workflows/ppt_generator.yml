@@ -1,0 +1,48 @@
+name: Generate HeatPump PPT Report
+
+on:
+  schedule:
+    # Runs at 09:30 UTC (17:30 CST/Beijing time) every Friday
+    - cron: '30 9 * * 5'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  generate_report:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run PPT Generator
+      env:
+        DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      run: |
+        python main.py
+        
+    - name: Upload PPT Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: HeatPump_Weekly_Report
+        path: HeatPump_Weekly_Report.pptx
+        retention-days: 14
+
+    - name: Commit history cache
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add history.json
+        git commit -m "Auto-update deduplication history [skip ci]" || echo "No changes to commit"
+        git push

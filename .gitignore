@@ -1,0 +1,18 @@
+# API Keys & Secrets
+.env
+
+# Virtual Environment
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# Project Outputs
+assets/
+*.pptx
+cron_run.log
+*.log
+
+# macOS system files
+.DS_Store

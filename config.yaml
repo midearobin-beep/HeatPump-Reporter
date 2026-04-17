@@ -1,0 +1,40 @@
+# ==========================================
+# HeatPump-Reporter 动态搜索关键词与范围配置
+# ==========================================
+# 你可以在这里随意修改 query（搜索公式），或者添加新的语言与国家地区！
+
+queries:
+  # 英语范围：主要覆盖北美与欧盟整体的大型政策、规章制度
+  - query: '("Heat pump" OR "HVAC") AND ("subsidy" OR "policy" OR "regulation")'
+    lang: "English (US/UK/EU)"
+    params: "&hl=en-US&gl=US&ceid=US:en"
+
+  # 英语范围（拓宽专业市场分析文章，包含一部分能被收录的开放性平台报告）：
+  - query: '("Heat pump") AND ("market trend" OR "analysis" OR "supply chain")'
+    lang: "English (Market Trend)"
+    params: "&hl=en-US&gl=US&ceid=US:en"
+
+  # 德语范围：覆盖德国、奥地利等德语强国的本土补助法案与禁令
+  - query: '("Wärmepumpe") AND ("Förderung" OR "Richtlinie" OR "Markt" OR "Verbot")'
+    lang: "German (Germany/Austria)"
+    params: "&hl=de&gl=DE&ceid=DE:de"
+
+  # 法语范围：法国市场专项政策、补贴活动
+  - query: '("pompe à chaleur") AND ("subvention" OR "politique" OR "marché")'
+    lang: "French (France/EU)"
+    params: "&hl=fr&gl=FR&ceid=FR:fr"
+
+  # 意大利语范围：涵盖意大利高补贴 (如 Superbonus) 相关的市场动态
+  - query: '("pompa di calore") AND ("incentivi" OR "sussidi" OR "politica" OR "mercato")'
+    lang: "Italian (Italy)"
+    params: "&hl=it&gl=IT&ceid=IT:it"
+
+  # 西班牙语范围：主要覆盖西班牙本土以及西语系市场
+  - query: '("bomba de calor") AND ("subvención" OR "política" OR "mercado")'
+    lang: "Spanish (Spain)"
+    params: "&hl=es&gl=ES&ceid=ES:es"
+
+# 关于领英(LinkedIn)抓取的局限说明：
+# 由于 LinkedIn 目前处于强力防爬与封闭访问状态，Google News 频道不会收录动态帖子与短文。
+# 取而代之，你可以尝试在这里写明像 `site:linkedin.com/pulse` 之类的限定词看是否能拾取到极少数漏网的开放文章。
+# 例如： `("Heat pump") site:linkedin.com/pulse`
