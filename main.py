@@ -7,8 +7,8 @@ from ppt_generator import create_news_ppt
 
 def main():
     print("1. 开始从欧洲及全球抓取多语种行业新闻...")
-    # Fetch multi-lingual heat pump related news in the last 7 days
-    raw_news = fetch_multilingual_news(days_back=7, max_results_per_lang=4)
+    # Fetch multi-lingual heat pump related news in the last 2 days for daily execution
+    raw_news = fetch_multilingual_news(days_back=2, max_results_per_lang=4)
     print(f"   => 成功抓取到 {len(raw_news)} 篇原始文章。")
     
     print("\n2. 使用 DeepSeek AI 深度翻译并提炼核心...")

@@ -2,8 +2,8 @@ name: Generate HeatPump PPT Report
 
 on:
   schedule:
-    # Runs at 09:30 UTC (17:30 CST/Beijing time) every Friday
-    - cron: '30 9 * * 5'
+    # Runs at 09:30 UTC (17:30 CST/Beijing time) every day
+    - cron: '30 9 * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
