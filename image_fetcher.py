@@ -5,7 +5,59 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def fetch_image(query: str, download_path: str) -> str:
+def generate_news_prompt(analysis: dict) -> str:
+    category = analysis.get("category", "")
+    country = analysis.get("country", "")
+    theme = analysis.get("theme", "")
+    target = analysis.get("target", "")
+    tone = analysis.get("tone", "")
+
+    base_templates = {
+        "政策法规": "Professional editorial news photo, European government architecture, clean energy transition context, realistic photography, natural daylight, Reuters style, serious tone",
+        "企业新闻": "Corporate news photo of modern HVAC headquarters or modern office building facade, professional business aesthetic, corporate PR photography style",
+        "产品发布": "Premium product launch photo of a modern air-to-water heat pump installed prominently, cinematic lighting, realistic materials, clean composition, industry magazine style",
+        "技术突破": "High-tech industrial photography of HVAC engineering, heat pump internals or laboratory testing, engineering realism, detailed, science magazine style",
+        "市场趋势": "Editorial photo showing suburban homes adopting heat pumps, clear market growth implication, realistic street scene, financial news style, Bloomberg aesthetic",
+        "安装案例": "Documentary realism photo of an installed heat pump outdoor unit, integrated with building exterior, professional installer context, realistic daylight",
+        "能源价格": "Editorial photo contrasting natural gas elements with electrical green energy, city context, subtle data or chart implication, Financial Times style",
+        "环保议题": "Green technology photography, earth and residential elements, clear sky, highly optimistic clean energy transition, documentary style"
+    }
+
+    country_styles = {
+        "Germany": "German suburban houses",
+        "UK": "British traditional brick homes",
+        "France": "French elegant townhouses",
+        "Netherlands": "Dutch row houses",
+        "Nordic": "Scandinavian wooden painted homes",
+        "Italy": "Italian terracotta roof houses",
+        "Spain": "Spanish sunshine Mediterranean style homes"
+    }
+
+    prompt_base = base_templates.get(category, "Professional clean photo of modern commercial HVAC or heat pump system, sustainable green energy concept, highly detailed, realistic, 4k")
+    country_style = ""
+    for k, v in country_styles.items():
+        if k.lower() in country.lower():
+            country_style = v
+            break
+    
+    components = [prompt_base]
+    if target == "residential" and country_style:
+        components.append(f"Context: {country_style} with realistic heat pump outdoor unit subtly visible.")
+    elif target in ["commercial", "industrial"]:
+        components.append("Context: Large scale commercial rooftop heat pump installation or industrial facility.")
+    else:
+        components.append("Realistic installed residential heat pump unit beside brick house.")
+
+    if theme:
+        components.append(f"Subject Theme: {theme}, {tone} atmosphere.")
+
+    components.append("Industry elements: air-to-water heat pump, monobloc, low carbon heating, smart energy.")
+    components.append("(Negative Prompt: cartoon, CGI, futuristic sci-fi, distorted unit, extra fans, unreadable text, duplicated houses, weird pipes, floating objects)")
+
+    return " | ".join(components)
+
+
+def fetch_image(analysis_data: dict, download_path: str) -> str:
     """
     Generate an image using MiniMax API,
     and return the path to the downloaded image.
@@ -19,8 +71,8 @@ def fetch_image(query: str, download_path: str) -> str:
     url = "https://api.minimaxi.com/v1/image_generation"
     headers = {"Authorization": f"Bearer {api_key}"}
     
-    # English prompts work best for image generation
-    prompt = f"Professional clean photo of {query}, modern commercial HVAC or heat pump system, sustainable green energy concept, highly detailed, realistic, 4k"
+    prompt = generate_news_prompt(analysis_data)
+    print(f"     [Vision System Prompt]: {prompt}")
 
     payload = {
         "model": "image-01",

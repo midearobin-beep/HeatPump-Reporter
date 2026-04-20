@@ -54,6 +54,13 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
           "summary": "一段约100-150字左右的详尽背景概述，需要带有深度和专业性，阐明行业背景、政策影响或技术突破情况。",
           "bullet_points": ["核心要点1：XXX", "核心要点2：XXX", "核心要点3：XXX"],
           "tags": ["市场趋势", "欧洲"],
+          "analysis": {
+            "category": "政策法规|企业新闻|产品发布|技术突破|市场趋势|安装案例|能源价格|环保议题 (选择1一项)",
+            "country": "提取涉及的主要国家英语名称(如 Germany, UK, France, Netherlands, Nordic, etc.)",
+            "theme": "提取新闻的核心英文主题词(如 subsidy, F-gas ban, heat pump installation, etc.)",
+            "target": "residential|commercial|industrial|utility (选择1项)",
+            "tone": "positive|neutral|serious (选择1项)"
+          },
           "source": "原始新闻来源",
           "date": "YYYY-MM-DD",
           "original_image_url": "如果原文传入了这个字段的值，请原样保留，如果没有则留空",

@@ -31,10 +31,8 @@ def main():
         # Priority 2: AI Generated Image
         if not success:
             print(f"     -> 使用 MiniMax 开始 AI 作图...")
-            query_terms = " ".join(item.get("tags", []))
-            if not query_terms:
-                query_terms = "Heat Pump"
-            fetch_image(query_terms, img_path)
+            analysis_data = item.get("analysis", {})
+            fetch_image(analysis_data, img_path)
             
         item['image_path'] = img_path
 
