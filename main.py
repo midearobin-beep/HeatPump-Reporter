@@ -37,10 +37,9 @@ def main():
         item['image_path'] = img_path
 
     print("\n4. 正在合成排版 PPT...")
-    # Calculate the ISO calendar week format (e.g. 2026CW15)
     now = datetime.datetime.now()
-    year, week, _ = now.isocalendar()
-    output_filename = f"{year}CW{week:02d}_HeatPump_Weekly_Report.pptx"
+    date_str = now.strftime("%Y-%m-%d")
+    output_filename = f"{date_str}_HeatPump_Daily_Briefing.pptx"
     
     create_news_ppt(refined_news, output_filename)
     

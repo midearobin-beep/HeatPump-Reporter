@@ -56,15 +56,14 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
       "news": [
         {
           "headline": "保留原文标题并中文化",
-          "rating": "1级-10级之间评分，按对企业参考价值（1-3水文，4-6普通资讯，7-8行业价值，9-10高价值）",
+          "rating": "只需输出 'S级', 'A级' 或 'B级' 之一。（S级=改变格局/战略必读，A级=高价值/重要变动，B级=动态参考）",
           "article_type": "填写A/B/C/D/E/F/G/H",
           "one_liner": "一句话结论（说明这篇新闻真正意味着什么）",
           "summary": "事件摘要（谁，什么市场，做了什么事，产品/政策。仅事实，80字内）",
           "key_info": {
             "公司": "", "品牌": "", "国家": "", "产品名称": "", "类别": "", 
-            "制热能力": "", "高级水温": "", "COP_SCOP": "", "冷媒": "", 
+            "制热能力": "", "最高水温": "", "COP_SCOP": "", "冷媒": "", 
             "噪音": "", "电压": "", "上市时间": "", "售价": "", "渠道": "", "目标用户": ""
-            // 如未给出参数请填“文中未披露”，如为合理推断请加【推测】
           },
           "hidden_signals": [
             "从行业视角判断背后的动作1",
@@ -104,7 +103,16 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
             temperature=0.3
         )
         
-        content = response.choices[0].message.content
+        # Clean up markdown code blocks if the LLM adds them
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        elif content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+        
         data = json.loads(content)
         
         return data.get("news", [])
