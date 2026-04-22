@@ -6,6 +6,18 @@ from pptx.enum.text import PP_ALIGN
 from typing import List, Dict
 from datetime import datetime
 
+# Article type code definitions
+ARTICLE_TYPE_MAP = {
+    "A": "新品发布 / 产品升级",
+    "B": "企业战略 / 投资扩产",
+    "C": "法规政策 / 补贴",
+    "D": "奖项宣传 / 品牌营销",
+    "E": "技术趋势 / 行业研究",
+    "F": "渠道合作 / 市场进入",
+    "G": "财报 / 经营数据",
+    "H": "其他",
+}
+
 def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_Report.pptx"):
     prs = Presentation()
     
@@ -13,30 +25,96 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
 
-    # 1. Title Slide
+    # ==========================================
+    # COVER SLIDE
+    # ==========================================
     title_slide_layout = prs.slide_layouts[0]
     slide = prs.slides.add_slide(title_slide_layout)
     title = slide.shapes.title
     subtitle = slide.placeholders[1]
     
-    title.text = "全球热泵与 HVAC 行业商业情报周报\n(Commercial Intelligence Briefing)"
-    subtitle.text = f"自动生成时间：{datetime.now().strftime('%Y-%m-%d')}"
-    
-    blank_slide_layout = prs.slide_layouts[5]
+    title.text = "全球热泵与 HVAC 行业商业情报日报\n(Commercial Intelligence Daily Briefing)"
+    # Force title to 25pt
+    for paragraph in title.text_frame.paragraphs:
+        paragraph.font.size = Pt(25)
 
+    subtitle.text = f"报告时间：{datetime.now().strftime('%Y-%m-%d')}"
+
+    # ==========================================
+    # LEGEND SLIDE: Article Type Definitions
+    # ==========================================
+    blank_slide_layout = prs.slide_layouts[5]
+    legend_slide = prs.slides.add_slide(blank_slide_layout)
+    
+    legend_title = legend_slide.shapes.title
+    legend_title.text = "情报分类索引 (Intelligence Classification)"
+    p = legend_title.text_frame.paragraphs[0]
+    p.font.size = Pt(22)
+    p.font.bold = True
+    p.alignment = PP_ALIGN.LEFT
+
+    # Left column: Article Type Legend
+    txLegend1 = legend_slide.shapes.add_textbox(Inches(0.8), Inches(1.5), Inches(5.5), Inches(5.5))
+    tf_leg1 = txLegend1.text_frame
+    tf_leg1.word_wrap = True
+
+    p = tf_leg1.add_paragraph()
+    p.text = "文章类型代码"
+    p.font.bold = True
+    p.font.size = Pt(16)
+    p.font.color.rgb = RGBColor(50, 50, 50)
+
+    for code, desc in ARTICLE_TYPE_MAP.items():
+        p = tf_leg1.add_paragraph()
+        p.text = f"  [{code}]  {desc}"
+        p.font.size = Pt(14)
+        p.space_after = Pt(4)
+
+    # Right column: Rating Legend
+    txLegend2 = legend_slide.shapes.add_textbox(Inches(7.0), Inches(1.5), Inches(5.5), Inches(5.5))
+    tf_leg2 = txLegend2.text_frame
+    tf_leg2.word_wrap = True
+
+    p = tf_leg2.add_paragraph()
+    p.text = "情报等级定义"
+    p.font.bold = True
+    p.font.size = Pt(16)
+    p.font.color.rgb = RGBColor(50, 50, 50)
+
+    rating_defs = [
+        ("S级  ★★★", "改变格局 / 战略必读", RGBColor(180, 0, 0)),
+        ("A级  ★★☆", "高价值 / 重要变动", RGBColor(200, 120, 0)),
+        ("B级  ★☆☆", "动态参考 / 行业风向", RGBColor(80, 80, 80)),
+    ]
+    for label, desc, color in rating_defs:
+        p = tf_leg2.add_paragraph()
+        p.text = f"  {label}"
+        p.font.bold = True
+        p.font.size = Pt(14)
+        p.font.color.rgb = color
+        p = tf_leg2.add_paragraph()
+        p.text = f"    {desc}"
+        p.font.size = Pt(12)
+        p.space_after = Pt(8)
+
+    # ==========================================
+    # NEWS CONTENT SLIDES
+    # ==========================================
     for item in news_items:
         # ==========================================
-        # SLIDE 1: Executive Summary & Table
+        # SLIDE 1: Executive Summary & Deep Analysis
         # ==========================================
         slide1 = prs.slides.add_slide(blank_slide_layout)
         
         # Title
         title_shape = slide1.shapes.title
-        title_text = f"[{item.get('article_type', 'X')}] {item.get('headline', '无标题')}"
+        article_type_code = item.get('article_type', 'X')
+        article_type_label = ARTICLE_TYPE_MAP.get(article_type_code, article_type_code)
+        title_text = f"[{article_type_code}·{article_type_label}] {item.get('headline', '无标题')}"
         title_shape.text = title_text
         title_shape.text_frame.word_wrap = False
         p = title_shape.text_frame.paragraphs[0]
-        p.font.size = Pt(18)
+        p.font.size = Pt(16)
         p.font.bold = True
         p.alignment = PP_ALIGN.LEFT
 
@@ -44,21 +122,23 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
         img_path = item.get('image_path')
         if img_path and os.path.exists(img_path):
             try:
-                slide1.shapes.add_picture(img_path, Inches(0.5), Inches(1.5), width=Inches(5))
+                slide1.shapes.add_picture(img_path, Inches(0.5), Inches(1.5), width=Inches(4.8))
             except Exception as e:
                 print(f"Error adding image {img_path}: {e}")
 
         # Text Box (Right side)
-        txBox1 = slide1.shapes.add_textbox(Inches(5.8), Inches(1.2), Inches(7.0), Inches(6.0))
+        txBox1 = slide1.shapes.add_textbox(Inches(5.6), Inches(1.2), Inches(7.2), Inches(6.0))
         tf1 = txBox1.text_frame
         tf1.word_wrap = True
 
         # Rating & One-Liner
+        rating = item.get('rating', 'N/A')
+        rating_color = RGBColor(180, 0, 0) if 'S' in str(rating) else RGBColor(200, 120, 0) if 'A' in str(rating) else RGBColor(80, 80, 80)
         p = tf1.add_paragraph()
-        p.text = f"♦ 情报等级: {item.get('rating', 'N/A')} | {item.get('one_liner', '')}"
+        p.text = f"♦ {rating} | {item.get('one_liner', '')}"
         p.font.bold = True
-        p.font.color.rgb = RGBColor(180, 0, 0)
-        p.font.size = Pt(14)
+        p.font.color.rgb = rating_color
+        p.font.size = Pt(13)
         
         tf1.add_paragraph()
         
@@ -66,42 +146,54 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
         p = tf1.add_paragraph()
         p.text = "【事件摘要】"
         p.font.bold = True
-        p.font.size = Pt(12)
+        p.font.size = Pt(11)
+        p.font.color.rgb = RGBColor(50, 50, 50)
         p = tf1.add_paragraph()
         p.text = item.get('summary', '暂无内容。')
-        p.font.size = Pt(11)
-        
-        tf1.add_paragraph()
+        p.font.size = Pt(10)
+        p.line_spacing = 1.2
 
-        # Key Info "Table" (Formatted lines)
-        p = tf1.add_paragraph()
-        p.text = "【关键参数提取】"
-        p.font.bold = True
-        p.font.size = Pt(12)
-
-        key_info = item.get("key_info", {})
-        if key_info:
-            for k, v in key_info.items():
-                if v and str(v).strip() and "未披露" not in str(v):
-                    p = tf1.add_paragraph()
-                    p.text = f" • {k}: {v}"
-                    p.font.size = Pt(10)
-        else:
+        # Deep Analysis (NEW - the key enrichment)
+        deep = item.get('deep_analysis', '')
+        if deep:
+            tf1.add_paragraph()
             p = tf1.add_paragraph()
-            p.text = " • 文中未披露明确参数"
+            p.text = "【深度分析 & 关键数据】"
+            p.font.bold = True
+            p.font.size = Pt(11)
+            p.font.color.rgb = RGBColor(0, 80, 150)
+            p = tf1.add_paragraph()
+            p.text = deep
             p.font.size = Pt(10)
+            p.line_spacing = 1.3
+
+        # Key Info "Table" (only show fields that have real values)
+        key_info = item.get("key_info", {})
+        visible_info = {k: v for k, v in key_info.items() if v and str(v).strip() and "未披露" not in str(v)}
+        if visible_info:
+            tf1.add_paragraph()
+            p = tf1.add_paragraph()
+            p.text = "【关键参数】"
+            p.font.bold = True
+            p.font.size = Pt(11)
+            p.font.color.rgb = RGBColor(50, 50, 50)
+            for k, v in visible_info.items():
+                p = tf1.add_paragraph()
+                p.text = f" • {k}: {v}"
+                p.font.size = Pt(9)
 
         # Source Links
         tf1.add_paragraph()
         p = tf1.add_paragraph()
         p.text = f"▶ 来源: {item.get('source', '')} | 日期: {item.get('date', '')}"
-        p.font.size = Pt(9)
+        p.font.size = Pt(8)
+        p.font.color.rgb = RGBColor(120, 120, 120)
         link = item.get('original_link', '')
         if link:
             p = tf1.add_paragraph()
             p.text = f"▶ 原文链接: {link}"
-            p.font.size = Pt(9)
-            p.font.color.rgb = RGBColor(0, 0, 255)
+            p.font.size = Pt(8)
+            p.font.color.rgb = RGBColor(0, 0, 200)
 
         # ==========================================
         # SLIDE 2: Commercial Intelligence Deep Dive
@@ -110,7 +202,7 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
         
         # Subtitle linking to main headline
         title_shape2 = slide2.shapes.title
-        title_shape2.text = f"↳ 商业情报洞察: {item.get('headline', '无标题')[:40]}..."
+        title_shape2.text = f"↳ 商业情报洞察: {item.get('headline', '无标题')[:50]}..."
         p2 = title_shape2.text_frame.paragraphs[0]
         p2.font.size = Pt(16)
         p2.font.bold = True
@@ -128,7 +220,7 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
         p.font.size = Pt(14)
         for sig in item.get('hidden_signals', []):
             p = tf2.add_paragraph()
-            p.text = f"  - {sig}"
+            p.text = f"  ⚡ {sig}"
             p.font.size = Pt(12)
         tf2.add_paragraph()
 
@@ -146,7 +238,7 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
                 p.font.size = Pt(11)
                 for line in lines:
                     p = tf2.add_paragraph()
-                    p.text = f"    - {line}"
+                    p.text = f"    → {line}"
                     p.font.size = Pt(11)
         tf2.add_paragraph()
 
@@ -157,7 +249,7 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
         p.font.size = Pt(14)
         for sug in item.get('suggestions', []):
             p = tf2.add_paragraph()
-            p.text = f"  - {sug}"
+            p.text = f"  📌 {sug}"
             p.font.size = Pt(12)
         tf2.add_paragraph()
 
@@ -169,7 +261,7 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
         p.font.color.rgb = RGBColor(180, 0, 0)
         for act in item.get('actions', []):
             p = tf2.add_paragraph()
-            p.text = f"  - {act}"
+            p.text = f"  🔺 {act}"
             p.font.size = Pt(12)
             p.font.bold = True
 
@@ -177,19 +269,21 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
     print(f"PPT 生成完毕，已保存至 {output_file}")
 
 if __name__ == "__main__":
-    # Test Data Array matching the new C-level strict json
     test_news = [
         {
             "headline": "测试: 大金发布新型高水温热泵",
-            "rating": "9",
+            "rating": "S级",
             "article_type": "A",
             "one_liner": "大金正试图用不需要管道改造的高温热泵强吃欧洲的传统燃气锅炉存量市场。",
             "summary": "大金在欧洲市场推出第三代针对家庭供暖的高温热泵，最高水温可达70度，无需更换旧型号暖气片，直指英国和德国市场。",
+            "deep_analysis": "大金第三代Altherma 3H HT系列最高出水温度提升至70°C（上一代为65°C），COP在35°C水温下达4.56，制热能力覆盖8-16kW。据EHPA数据，2025年欧洲热泵安装量约180万台，同比增长约8%，其中高温机型占比从2024年的12%增至【推测】18%。英国BUS补贴维持£7,500/台，德国BAFA补贴最高可达设备价格的70%。大金此举是针对欧洲约6000万台存量燃气锅炉替换市场的定向打击。",
             "key_info": {
-                "国家": "欧洲/英国",
+                "国家": "欧洲/英国/德国",
                 "品牌": "Daikin",
-                "高级水温": "70度",
-                "售卖渠道": "文中未披露"
+                "最高水温": "70°C",
+                "COP_SCOP": "COP 4.56 @35°C",
+                "冷媒": "R32",
+                "售价": "文中未披露"
             },
             "hidden_signals": [
                 "高温机型抢替代锅炉市场已经成为绝对主流",

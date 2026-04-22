@@ -50,6 +50,7 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     3. 自动识别文章类型（必须先判断）：
        A. 新品发布/产品升级, B. 企业战略/投资扩产, C. 法规政策/补贴, D. 奖项宣传/品牌营销, 
        E. 技术趋势/行业研究, F. 渠道合作/市场进入, G. 财报/经营数据, H. 其他
+    4. 确保输出的JSON格式完全合法。千万不要有末尾多余的逗号(Trailing Commas)，禁止保留任何注释。
 
     你必须以严格的 JSON 格式输出，返回一个包含 "news" 键的字典，"news" 的值是一个对象数组。请按照下述结构输出：
     {
@@ -60,6 +61,7 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
           "article_type": "填写A/B/C/D/E/F/G/H",
           "one_liner": "一句话结论（说明这篇新闻真正意味着什么）",
           "summary": "事件摘要（谁，什么市场，做了什么事，产品/政策。仅事实，80字内）",
+          "deep_analysis": "深度分析（150-250字）：必须包含具体数据、趋势变化、百分比、金额、参数对比、历史变化等硬核信息。例如：德国燃气价格较去年同期上涨X%，热泵安装量增长X%，补贴额度从X欧元调整到Y欧元等。如果原文有具体数字必须提取，如果没有则根据行业经验推断并标注【推测】。禁止空洞描述。",
           "key_info": {
             "公司": "", "品牌": "", "国家": "", "产品名称": "", "类别": "", 
             "制热能力": "", "最高水温": "", "COP_SCOP": "", "冷媒": "", 
@@ -79,7 +81,7 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
           "analysis": {
             "category": "政策法规|企业新闻|产品发布|技术突破|市场趋势|安装案例|能源价格|环保议题 (选择1一项)",
             "country": "提取涉及的主要国家英语名称(如 Germany, UK, France, etc.)",
-            "theme": "提取新闻的心英文主题词(如 subsidy, F-gas ban, heat pump installation, etc.)",
+            "theme": "提取新闻的核心英文主题词(如 subsidy, F-gas ban, heat pump installation, etc.)",
             "target": "residential|commercial|industrial|utility (选择1项)",
             "tone": "positive|neutral|serious (选择1项)"
           },
@@ -100,9 +102,11 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
                 {"role": "user", "content": input_text}
             ],
             response_format={"type": "json_object"},
-            temperature=0.3
+            temperature=0.3,
+            max_tokens=8192
         )
         
+        import re
         # Clean up markdown code blocks if the LLM adds them
         content = response.choices[0].message.content.strip()
         if content.startswith("```json"):
@@ -112,6 +116,9 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
         if content.endswith("```"):
             content = content[:-3]
         content = content.strip()
+        
+        # Simple fix for trailing commas in arrays and objects, extremely common in large LLM JSONs
+        content = re.sub(r',\s*([\]}])', r'\1', content)
         
         data = json.loads(content)
         
