@@ -94,39 +94,51 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     }
     """
 
-    try:
-        response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": input_text}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=8192
-        )
-        
-        import re
-        # Clean up markdown code blocks if the LLM adds them
-        content = response.choices[0].message.content.strip()
-        if content.startswith("```json"):
-            content = content[7:]
-        elif content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
-        
-        # Simple fix for trailing commas in arrays and objects, extremely common in large LLM JSONs
-        content = re.sub(r',\s*([\]}])', r'\1', content)
-        
-        data = json.loads(content)
-        
-        return data.get("news", [])
+    import re
+    import time
 
-    except Exception as e:
-        print(f"Error during AI processing: {e}")
-        return []
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"     [DeepSeek] 第 {attempt} 次请求 (共 {max_retries} 次)...")
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": input_text}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=8192,
+                timeout=120
+            )
+            
+            # Clean up markdown code blocks if the LLM adds them
+            content = response.choices[0].message.content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            elif content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
+            
+            # Simple fix for trailing commas in arrays and objects, extremely common in large LLM JSONs
+            content = re.sub(r',\s*([\]}])', r'\1', content)
+            
+            data = json.loads(content)
+            
+            return data.get("news", [])
+
+        except Exception as e:
+            print(f"     [DeepSeek] 第 {attempt} 次失败: {e}")
+            if attempt < max_retries:
+                wait_time = attempt * 10
+                print(f"     [DeepSeek] 等待 {wait_time} 秒后重试...")
+                time.sleep(wait_time)
+            else:
+                print(f"Error during AI processing after {max_retries} retries: {e}")
+                return []
 
 if __name__ == "__main__":
     test_news = [
