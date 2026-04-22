@@ -2,6 +2,7 @@ import os
 import json
 from typing import List, Dict
 from openai import OpenAI
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -30,7 +31,10 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
 
     client = OpenAI(
         api_key=api_key,
-        base_url="https://api.deepseek.com"
+        base_url="https://api.deepseek.com",
+        http_client=httpx.Client(
+            timeout=httpx.Timeout(180.0, connect=30.0)
+        )
     )
 
     # Format input for LLM
