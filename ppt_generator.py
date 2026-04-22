@@ -35,6 +35,8 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
     
     title.width = prs.slide_width
     title.left = Inches(0)
+    title.top = Inches(2.5)
+    title.height = Inches(1.5)
     title.text = "全球热泵与 HVAC 行业商业情报日报\n(Commercial Intelligence Daily Briefing)"
     # Force title to 25pt and center alignment
     for paragraph in title.text_frame.paragraphs:
@@ -43,6 +45,8 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
 
     subtitle.width = prs.slide_width
     subtitle.left = Inches(0)
+    subtitle.top = Inches(4.2)
+    subtitle.height = Inches(1.0)
     subtitle.text = f"报告时间：{datetime.now().strftime('%Y-%m-%d')}"
     for paragraph in subtitle.text_frame.paragraphs:
         paragraph.font.size = Pt(16)
