@@ -34,11 +34,15 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
     subtitle = slide.placeholders[1]
     
     title.text = "全球热泵与 HVAC 行业商业情报日报\n(Commercial Intelligence Daily Briefing)"
-    # Force title to 25pt
+    # Force title to 25pt and center alignment
     for paragraph in title.text_frame.paragraphs:
         paragraph.font.size = Pt(25)
+        paragraph.alignment = PP_ALIGN.CENTER
 
     subtitle.text = f"报告时间：{datetime.now().strftime('%Y-%m-%d')}"
+    for paragraph in subtitle.text_frame.paragraphs:
+        paragraph.font.size = Pt(16)
+        paragraph.alignment = PP_ALIGN.CENTER
 
     # ==========================================
     # LEGEND SLIDE: Article Type Definitions
