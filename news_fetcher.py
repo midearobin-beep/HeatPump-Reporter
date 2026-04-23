@@ -9,6 +9,7 @@ import googlenewsdecoder
 import yaml
 import os
 import json
+import trafilatura
 
 def load_history():
     cache_path = os.path.join(os.path.dirname(__file__), "history.json")
@@ -71,6 +72,22 @@ def extract_og_image(url: str) -> str:
         print(f"Failed to extract og:image for {url}: {e}")
         return ""
 
+def extract_full_text(url: str) -> str:
+    """
+    Downloads and extracts the entire reading text from a URL using Trafilatura.
+    Returns empty string if failed.
+    """
+    try:
+        downloaded = trafilatura.fetch_url(url)
+        if downloaded:
+            text = trafilatura.extract(downloaded)
+            if text:
+                return text
+        return ""
+    except Exception as e:
+        print(f"Trafilatura failed to extract text for {url}: {e}")
+        return ""
+
 def fetch_multilingual_news(days_back: int = 7, max_results_per_lang: int = 5) -> List[Dict]:
     """
     Fetch news from Google News RSS across multiple languages.
@@ -118,13 +135,19 @@ def fetch_multilingual_news(days_back: int = 7, max_results_per_lang: int = 5) -
                     # Try extracting original image from real link
                     og_image_url = extract_og_image(real_link)
                     
+                    # Fetch FULL TEXT to feed the AI and prevent hallucination
+                    full_text = extract_full_text(real_link)
+                    fallback_summary = getattr(entry, "summary", "")
+                    final_content = full_text if full_text else fallback_summary
+                    
                     results.append({
                         "title": entry.title,
                         "link": real_link,
                         "published": pub_date.strftime("%Y-%m-%d %H:%M:%S"),
                         "source": entry.source.title if hasattr(entry, 'source') else "Google News",
                         "language": q["lang"],
-                        "original_image_url": og_image_url
+                        "original_image_url": og_image_url,
+                        "summary": final_content
                     })
                     count += 1
             except Exception as e:
