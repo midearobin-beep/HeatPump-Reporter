@@ -65,7 +65,7 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
           "article_type": "填写A/B/C/D/E/F/G/H",
           "one_liner": "一句话结论（说明这篇新闻真正意味着什么）",
           "summary": "事件摘要（谁，什么市场，做了什么事，产品/政策。仅事实，80字内）",
-          "deep_analysis": "深度分析（150-250字）：基于「原文事实」进行情报深挖。提取出文中的硬核数据（如参数、投资额、产量、涨跌幅）。【警告：如果原文没有具体数字，绝对禁止捏造或自行推测任何财务、产能或产品参数！】。如果原文缺乏数据，请深度分析其战略意图或行业影响。不要解释你没找到数据，只要呈现你找到的有价值信息即可。",
+          "deep_analysis": "深度分析（150-250字）：基于「原文事实」进行情报深挖。提取出文中的硬核数据（如参数、投资额、产量、涨跌幅）。【重要：如果原文中包含具体数字/数据，请务必在分析中使用Markdown表格进行结构化清晰展示，方便一目了然】。【警告：如果原文没有具体数字，绝对禁止捏造或自行推测任何财务、产能或产品参数！】。如果原文缺乏数据，请深度分析其战略意图或行业影响。不要解释你没找到数据，只要呈现你找到的有价值信息即可。",
           "key_info": {
             "公司": "", "品牌": "", "国家": "", "产品名称": "", "类别": "", 
             "制热能力": "", "最高水温": "", "COP_SCOP": "", "冷媒": "", 
@@ -100,49 +100,60 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
 
     import re
     import time
-
-    max_retries = 3
-    for attempt in range(1, max_retries + 1):
-        try:
-            print(f"     [DeepSeek] 第 {attempt} 次请求 (共 {max_retries} 次)...")
-            response = client.chat.completions.create(
-                model="deepseek-chat",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": input_text}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.3,
-                max_tokens=8192,
-                timeout=120
-            )
-            
-            # Clean up markdown code blocks if the LLM adds them
-            content = response.choices[0].message.content.strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            elif content.startswith("```"):
-                content = content[3:]
-            if content.endswith("```"):
-                content = content[:-3]
-            content = content.strip()
-            
-            # Simple fix for trailing commas in arrays and objects, extremely common in large LLM JSONs
-            content = re.sub(r',\s*([\]}])', r'\1', content)
-            
-            data = json.loads(content)
-            
-            return data.get("news", [])
-
-        except Exception as e:
-            print(f"     [DeepSeek] 第 {attempt} 次失败: {e}")
-            if attempt < max_retries:
-                wait_time = attempt * 10
-                print(f"     [DeepSeek] 等待 {wait_time} 秒后重试...")
-                time.sleep(wait_time)
-            else:
-                print(f"Error during AI processing after {max_retries} retries: {e}")
-                return []
+    
+    chunk_size = 10
+    all_refined_news = []
+    
+    for i in range(0, len(news_items), chunk_size):
+        chunk = news_items[i:i + chunk_size]
+        input_text = json.dumps(chunk, ensure_ascii=False, indent=2)
+        
+        max_retries = 3
+        chunk_success = False
+        
+        for attempt in range(1, max_retries + 1):
+            try:
+                print(f"     [DeepSeek] 处理批次 {i//chunk_size + 1} (共 {len(news_items)//chunk_size + 1} 批) - 第 {attempt} 次请求...")
+                response = client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": input_text}
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.3,
+                    max_tokens=8192,
+                    timeout=300
+                )
+                
+                # Clean up markdown code blocks if the LLM adds them
+                content = response.choices[0].message.content.strip()
+                if content.startswith("```json"):
+                    content = content[7:]
+                elif content.startswith("```"):
+                    content = content[3:]
+                if content.endswith("```"):
+                    content = content[:-3]
+                content = content.strip()
+                
+                # Simple fix for trailing commas in arrays and objects, extremely common in large LLM JSONs
+                content = re.sub(r',\s*([\]}])', r'\1', content)
+                
+                data = json.loads(content)
+                all_refined_news.extend(data.get("news", []))
+                chunk_success = True
+                break
+                
+            except Exception as e:
+                print(f"     [DeepSeek] 批次 {i//chunk_size + 1} 第 {attempt} 次失败: {e}")
+                if attempt < max_retries:
+                    wait_time = attempt * 10
+                    print(f"     [DeepSeek] 等待 {wait_time} 秒后重试...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"Error during AI processing for batch {i//chunk_size + 1} after {max_retries} retries: {e}")
+                    
+    return all_refined_news
 
 if __name__ == "__main__":
     test_news = [
