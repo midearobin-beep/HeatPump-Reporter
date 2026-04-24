@@ -135,7 +135,9 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
         img_path = item.get('image_path')
         if img_path and os.path.exists(img_path):
             try:
-                pic = slide1.shapes.add_picture(img_path, Inches(0.5), Inches(1.5), width=Inches(4.8))
+                data_table = item.get("data_table", {})
+                pic_height = Inches(2.0) if len(data_table) > 6 else Inches(2.8)
+                pic = slide1.shapes.add_picture(img_path, Inches(0.5), Inches(1.5), height=pic_height)
                 img_bottom = pic.top + pic.height
             except Exception as e:
                 print(f"Error adding image {img_path}: {e}")
@@ -217,33 +219,33 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
                 rows = len(dict_items) + 1
                 cols = 2
                 table_top = img_bottom + Inches(0.3)
-                # Ensure we don't go off the bottom of the slide (7.5 inches)
-                if table_top > Inches(6.5):
-                    table_top = Inches(6.5)
+                # Ensure we don't go off the bottom of the slide (7.5 inches limit minus table height buffer)
+                if table_top > Inches(4.5):
+                    table_top = Inches(4.5)
                 
-                table_shape = slide1.shapes.add_table(rows, cols, Inches(0.5), table_top, Inches(4.8), Inches(0.4 * rows))
+                table_shape = slide1.shapes.add_table(rows, cols, Inches(0.5), table_top, Inches(4.8), Inches(0.25 * rows))
                 table = table_shape.table
                 
                 # Header
                 cell0 = table.cell(0, 0)
-                cell0.text = "核心参数名"
+                cell0.text = "硬核洞察与参数"
                 cell0.text_frame.paragraphs[0].font.bold = True
-                cell0.text_frame.paragraphs[0].font.size = Pt(11)
+                cell0.text_frame.paragraphs[0].font.size = Pt(10)
                 
                 cell1 = table.cell(0, 1)
                 cell1.text = "数值 / 指标"
                 cell1.text_frame.paragraphs[0].font.bold = True
-                cell1.text_frame.paragraphs[0].font.size = Pt(11)
+                cell1.text_frame.paragraphs[0].font.size = Pt(10)
                 
                 # Data Rows
                 for i, (k, v) in enumerate(dict_items):
                     c0 = table.cell(i+1, 0)
                     c0.text = str(k)
-                    c0.text_frame.paragraphs[0].font.size = Pt(10)
+                    c0.text_frame.paragraphs[0].font.size = Pt(9)
                     
                     c1 = table.cell(i+1, 1)
                     c1.text = str(v)
-                    c1.text_frame.paragraphs[0].font.size = Pt(10)
+                    c1.text_frame.paragraphs[0].font.size = Pt(9)
 
         # ==========================================
         # SLIDE 2: Commercial Intelligence Deep Dive
