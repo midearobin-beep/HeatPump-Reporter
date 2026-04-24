@@ -116,7 +116,7 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
             try:
                 print(f"     [DeepSeek] 处理批次 {i//chunk_size + 1} (共 {len(news_items)//chunk_size + 1} 批) - 第 {attempt} 次请求...")
                 response = client.chat.completions.create(
-                    model="deepseek-chat",
+                    model="deepseek-v4-pro",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": input_text}
