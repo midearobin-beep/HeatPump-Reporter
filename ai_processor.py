@@ -1,46 +1,29 @@
 import os
 import json
 from typing import List, Dict
-from openai import OpenAI
-import httpx
+import time
 from dotenv import load_dotenv
+import google.generativeai as genai
 
 load_dotenv()
 
 def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     """
     Takes a list of fetched news dictionaries, translates and summarizes them
-    into a structured JSON array format.
+    into a structured JSON array format using Google Gemini 3.1 Pro.
     """
     if not news_items:
         return []
 
     # Get API key
-    api_key = os.getenv("DEEPSEEK_API_KEY")
-    if not api_key or api_key == "your_deepseek_api_key_here":
-        print("Warning: DEEPSEEK_API_KEY not set. Using dummy data.")
-        return [
-            {
-                "headline": "示例新闻：德国增加热泵补贴",
-                "summary": "德国政府宣布将为安装高效热泵的家庭提供高达70%的安装补贴，以加速淘汰化石燃料供暖系统。",
-                "tags": ["补贴", "欧洲市场"],
-                "source": "Dummy Source",
-                "date": "2026-04-09"
-            }
-        ]
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("Warning: GEMINI_API_KEY not set. Falling back to dummy data.")
+        return []
 
-    client = OpenAI(
-        api_key=api_key,
-        base_url="https://api.deepseek.com",
-        http_client=httpx.Client(
-            timeout=httpx.Timeout(180.0, connect=30.0)
-        )
-    )
-
-    # Format input for LLM
-    input_text = "Here are the latest news items:\n\n"
-    for idx, item in enumerate(news_items):
-        input_text += f"{idx+1}. Title: {item['title']}\nLink: {item['link']}\nSource: {item['source']}\nLanguage: {item.get('language','')}\nDate: {item.get('published','')}\nOriginal Image: {item.get('original_image_url','')}\n\n"
+    genai.configure(api_key=api_key)
+    # Using the latest 3.1 Pro preview as requested
+    model = genai.GenerativeModel('gemini-3.1-pro-preview')
 
     system_prompt = """
     你是「全球热泵行业情报分析引擎（Heat Pump Intelligence Engine）」。
@@ -54,7 +37,7 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     3. 自动识别文章类型（必须先判断）：
        A. 新品发布/产品升级, B. 企业战略/投资扩产, C. 法规政策/补贴, D. 奖项宣传/品牌营销, 
        E. 技术趋势/行业研究, F. 渠道合作/市场进入, G. 财报/经营数据, H. 其他
-    4. 确保输出的JSON格式完全合法。千万不要有末尾多余的逗号(Trailing Commas)，禁止保留任何注释。
+    4. 确保输出的JSON格式完全合法。
 
     你必须以严格的 JSON 格式输出，返回一个包含 "news" 键的字典，"news" 的值是一个对象数组。请按照下述结构输出：
     {
@@ -99,36 +82,30 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     }
     """
 
-    import re
-    import time
-    
     chunk_size = 5
     all_refined_news = []
     
     for i in range(0, len(news_items), chunk_size):
         chunk = news_items[i:i + chunk_size]
-        input_text = json.dumps(chunk, ensure_ascii=False, indent=2)
+        input_data = json.dumps(chunk, ensure_ascii=False, indent=2)
         
         max_retries = 3
         chunk_success = False
         
         for attempt in range(1, max_retries + 1):
             try:
-                print(f"     [DeepSeek] 处理批次 {i//chunk_size + 1} (共 {len(news_items)//chunk_size + 1} 批) - 第 {attempt} 次请求...")
-                response = client.chat.completions.create(
-                    model="deepseek-v4-flash",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": input_text}
-                    ],
-                    response_format={"type": "json_object"},
-                    temperature=0.3,
-                    max_tokens=8192,
-                    timeout=300
+                print(f"     [Gemini 3.1 Pro] 处理批次 {i//chunk_size + 1} (共 {len(news_items)//chunk_size + 1} 批) - 第 {attempt} 次请求...")
+                
+                response = model.generate_content(
+                    f"{system_prompt}\n\nInput Data:\n{input_data}",
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.3,
+                        response_mime_type="application/json",
+                    )
                 )
                 
-                # Clean up markdown code blocks if the LLM adds them
-                content = response.choices[0].message.content.strip()
+                content = response.text.strip()
+                # Simple fix for potential markdown wrapping
                 if content.startswith("```json"):
                     content = content[7:]
                 elif content.startswith("```"):
@@ -137,27 +114,22 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
                     content = content[:-3]
                 content = content.strip()
                 
-                # Simple fix for trailing commas in arrays and objects, extremely common in large LLM JSONs
-                content = re.sub(r',\s*([\]}])', r'\1', content)
+                batch_data = json.loads(content)
+                if "news" in batch_data:
+                    all_refined_news.extend(batch_data["news"])
                 
-                data = json.loads(content)
-                all_refined_news.extend(data.get("news", []))
                 chunk_success = True
                 break
-                
             except Exception as e:
-                print(f"     [DeepSeek] 批次 {i//chunk_size + 1} 第 {attempt} 次失败: {e}")
+                print(f"     [Gemini] 批次 {i//chunk_size + 1} 第 {attempt} 次失败: {str(e)}")
                 if attempt < max_retries:
                     wait_time = attempt * 10
-                    print(f"     [DeepSeek] 等待 {wait_time} 秒后重试...")
+                    print(f"     [Gemini] 等待 {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
-                    print(f"Error during AI processing for batch {i//chunk_size + 1} after {max_retries} retries: {e}")
-                    
+                    print(f"Error during Gemini processing for batch {i//chunk_size + 1} after {max_retries} retries.")
+        
+        if not chunk_success:
+            continue
+            
     return all_refined_news
-
-if __name__ == "__main__":
-    test_news = [
-        {"title": "UK opens £1.5bn boiler upgrade scheme extension", "source": "BBC News", "published": "2026-04-08 10:00:00"}
-    ]
-    print(json.dumps(refine_news_with_ai(test_news), ensure_ascii=False, indent=2))
