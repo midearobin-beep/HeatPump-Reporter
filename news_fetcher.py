@@ -146,6 +146,7 @@ def fetch_multilingual_news(days_back: int = 7, max_results_per_lang: int = 5) -
                         "published": pub_date.strftime("%Y-%m-%d %H:%M:%S"),
                         "source": entry.source.title if hasattr(entry, 'source') else "Google News",
                         "language": q["lang"],
+                        "continent": q.get("continent", "Other"),
                         "original_image_url": og_image_url,
                         "summary": final_content
                     })

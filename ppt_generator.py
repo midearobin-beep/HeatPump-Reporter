@@ -109,6 +109,10 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
         p.font.size = Pt(12)
         p.space_after = Pt(8)
 
+    # Sort news items by continent
+    continent_order = ["Europe", "Asia", "North America", "South America", "Oceania", "Africa", "Other"]
+    news_items.sort(key=lambda x: continent_order.index(x.get("continent", "Other")) if x.get("continent", "Other") in continent_order else 999)
+
     # ==========================================
     # NEWS CONTENT SLIDES
     # ==========================================
@@ -122,11 +126,12 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
         title_shape = slide1.shapes.title
         article_type_code = item.get('article_type', 'X')
         article_type_label = ARTICLE_TYPE_MAP.get(article_type_code, article_type_code)
-        title_text = f"[{article_type_code}·{article_type_label}] {item.get('headline', '无标题')}"
+        continent = item.get('continent', 'Other')
+        title_text = f"[{continent}] [{article_type_code}·{article_type_label}] {item.get('headline', '无标题')}"
         title_shape.text = title_text
         title_shape.text_frame.word_wrap = False
         p = title_shape.text_frame.paragraphs[0]
-        p.font.size = Pt(16)
+        p.font.size = Pt(14)
         p.font.bold = True
         p.alignment = PP_ALIGN.LEFT
 

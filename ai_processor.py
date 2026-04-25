@@ -22,7 +22,7 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
         return []
 
     genai.configure(api_key=api_key)
-    # Using the latest 3.1 Pro preview as requested
+    # Using Gemini 3.1 Pro Preview (Paid Tier)
     model = genai.GenerativeModel('gemini-3.1-pro-preview')
 
     system_prompt = """
@@ -82,8 +82,11 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     }
     """
 
-    chunk_size = 5
+    chunk_size = 2
     all_refined_news = []
+    
+    # Create a lookup for continent based on link
+    link_to_continent = {item.get('link'): item.get('continent', 'Other') for item in news_items}
     
     for i in range(0, len(news_items), chunk_size):
         chunk = news_items[i:i + chunk_size]
@@ -116,6 +119,9 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
                 
                 batch_data = json.loads(content)
                 if "news" in batch_data:
+                    for n in batch_data["news"]:
+                        # Re-attach continent based on link
+                        n["continent"] = link_to_continent.get(n.get("original_link"), "Other")
                     all_refined_news.extend(batch_data["news"])
                 
                 chunk_success = True
