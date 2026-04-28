@@ -22,8 +22,15 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
         return []
 
     genai.configure(api_key=api_key)
-    # Using Gemini 3.1 Pro Preview (Paid Tier)
-    model = genai.GenerativeModel('gemini-3.1-pro-preview')
+    # Model cascade: start with Gemini 3.1 Pro (best quality), fall back to 1.5 Pro on quota errors
+    MODEL_CASCADE = [
+        'gemini-3.1-pro-preview',
+        'gemini-1.5-pro',
+    ]
+    # Find which model to start with (check if we already switched during this run)
+    primary_model_name = MODEL_CASCADE[0]
+    model = genai.GenerativeModel(primary_model_name)
+    current_model_idx = 0
 
     system_prompt = """
     你是「全球热泵行业情报分析引擎（Heat Pump Intelligence Engine）」。
@@ -82,7 +89,7 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     }
     """
 
-    chunk_size = 2
+    chunk_size = 4  # Increased from 2 to reduce daily API call count
     all_refined_news = []
     
     # Create a lookup for continent based on link
@@ -97,7 +104,8 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
         
         for attempt in range(1, max_retries + 1):
             try:
-                print(f"     [Gemini 3.1 Pro] 处理批次 {i//chunk_size + 1} (共 {len(news_items)//chunk_size + 1} 批) - 第 {attempt} 次请求...")
+                model_name = MODEL_CASCADE[current_model_idx]
+                print(f"     [{model_name}] 处理批次 {i//chunk_size + 1} (共 {(len(news_items) + chunk_size - 1)//chunk_size} 批) - 第 {attempt} 次请求...")
                 
                 response = model.generate_content(
                     f"{system_prompt}\n\nInput Data:\n{input_data}",
@@ -127,13 +135,23 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
                 chunk_success = True
                 break
             except Exception as e:
-                print(f"     [Gemini] 批次 {i//chunk_size + 1} 第 {attempt} 次失败: {str(e)}")
+                err_str = str(e)
+                # Detect quota exhaustion and switch model
+                if "429" in err_str and current_model_idx < len(MODEL_CASCADE) - 1:
+                    current_model_idx += 1
+                    new_model_name = MODEL_CASCADE[current_model_idx]
+                    print(f"     [配额耗尽] 切换至备用模型: {new_model_name}")
+                    model = genai.GenerativeModel(new_model_name)
+                    # Don't count this as a retry, just switch and retry immediately
+                    attempt -= 1
+                    continue
+                print(f"     [AI] 批次 {i//chunk_size + 1} 第 {attempt} 次失败: {err_str[:120]}")
                 if attempt < max_retries:
                     wait_time = attempt * 10
-                    print(f"     [Gemini] 等待 {wait_time} 秒后重试...")
+                    print(f"     [AI] 等待 {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
-                    print(f"Error during Gemini processing for batch {i//chunk_size + 1} after {max_retries} retries.")
+                    print(f"Error during AI processing for batch {i//chunk_size + 1} after {max_retries} retries.")
         
         if not chunk_success:
             continue

@@ -10,6 +10,106 @@ import yaml
 import os
 import json
 import trafilatura
+from urllib.parse import urlparse
+
+# ==========================================
+# URL-Based Continent Detection
+# ==========================================
+# TLD -> continent mapping. Checked BEFORE falling back to query-config.
+_TLD_TO_CONTINENT = {
+    # Europe
+    "uk": "Europe", "co.uk": "Europe", "gb": "Europe",
+    "de": "Europe", "at": "Europe", "ch": "Europe",
+    "fr": "Europe",
+    "it": "Europe",
+    "es": "Europe",
+    "pt": "Europe",  # Portugal -> Europe, NOT South America
+    "nl": "Europe", "be": "Europe",
+    "pl": "Europe", "cz": "Europe", "sk": "Europe", "hu": "Europe",
+    "ro": "Europe", "bg": "Europe",
+    "se": "Europe", "no": "Europe", "dk": "Europe", "fi": "Europe",
+    "gr": "Europe",
+    "tr": "Europe",  # Türkiye is geographically on the border; we classify as Europe
+    "eu": "Europe",
+    # North America
+    "us": "North America",
+    "ca": "North America",
+    "mx": "North America",
+    # South America
+    "br": "South America",
+    "ar": "South America", "cl": "South America", "co": "South America",
+    "pe": "South America", "ve": "South America",
+    # Asia
+    "ru": "Asia", "cn": "Asia", "jp": "Asia", "kr": "Asia",
+    "in": "Asia", "vn": "Asia", "th": "Asia", "id": "Asia",
+    "my": "Asia", "sg": "Asia", "ph": "Asia",
+    "mn": "Asia",
+    "ae": "Asia", "sa": "Asia", "il": "Asia",
+    "kz": "Asia", "ua": "Asia",
+    # Oceania
+    "au": "Oceania", "nz": "Oceania",
+    # Africa
+    "za": "Africa", "ng": "Africa", "ke": "Africa", "eg": "Africa",
+}
+
+# Known US domains that use generic TLDs (.com / .net)
+_US_DOMAINS = {
+    "achrnews.com", "contractingbusiness.com", "hpac.com",
+    "energystar.gov", "energy.gov", "epa.gov",
+    "cbsnews.com", "foxnews.com", "fox43.com", "reuters.com",
+    "bloomberg.com", "nytimes.com", "wsj.com", "washingtonpost.com",
+    "energyvanguard.com", "greenbuildingadvisor.com",
+    "hvacschool.com", "hvacinformed.com",
+    "utilitydive.com", "greentech.media", "pv-magazine-usa.com",
+    "canary.media", "e360.yale.edu", "sierraclub.org",
+    "treehugger.com", "electrek.co", "cleantechnica.com",
+}
+
+
+# Known Portuguese (Portugal) media domains that use non-.pt TLDs
+_PT_DOMAINS = {
+    "canaln.tv", "rtp.pt", "sicnoticias.pt", "cmjornal.pt",
+    "dn.pt", "jn.pt", "publico.pt", "observador.pt", "expresso.pt",
+}
+
+# Known Brazilian media domains that use non-.br TLDs  
+_BR_DOMAINS = {
+    "globo.com", "g1.globo.com", "terra.com.br", "r7.com",
+}
+
+def detect_continent_from_url(url: str, fallback: str = "Other") -> str:
+    """Infer continent from article URL using TLD and known US domain lists."""
+    try:
+        hostname = urlparse(url).hostname or ""
+        hostname = hostname.lower().removeprefix("www.")
+
+        # Check known US domains first (highest priority)
+        if hostname in _US_DOMAINS or hostname.endswith(".gov") or hostname.endswith(".edu"):
+            return "North America"
+
+        # Check special-case national domains (non-obvious TLDs)
+        if hostname in _PT_DOMAINS:
+            return "Europe"
+        if hostname in _BR_DOMAINS:
+            return "South America"
+
+        # Extract effective TLD (handle co.uk, com.br, etc.)
+        parts = hostname.split(".")
+        # Try 2-part suffix first (e.g. co.uk, com.br)
+        if len(parts) >= 3:
+            suffix2 = ".".join(parts[-2:])
+            if suffix2 in _TLD_TO_CONTINENT:
+                return _TLD_TO_CONTINENT[suffix2]
+        # Then single TLD
+        if len(parts) >= 2:
+            tld = parts[-1]
+            if tld in _TLD_TO_CONTINENT:
+                return _TLD_TO_CONTINENT[tld]
+
+        # .com / .net / .org / .io are global — use fallback from query config
+        return fallback
+    except Exception:
+        return fallback
 
 def load_history():
     cache_path = os.path.join(os.path.dirname(__file__), "history.json")
@@ -146,7 +246,7 @@ def fetch_multilingual_news(days_back: int = 7, max_results_per_lang: int = 5) -
                         "published": pub_date.strftime("%Y-%m-%d %H:%M:%S"),
                         "source": entry.source.title if hasattr(entry, 'source') else "Google News",
                         "language": q["lang"],
-                        "continent": q.get("continent", "Other"),
+                        "continent": detect_continent_from_url(real_link, fallback=q.get("continent", "Other")),
                         "original_image_url": og_image_url,
                         "summary": final_content
                     })
