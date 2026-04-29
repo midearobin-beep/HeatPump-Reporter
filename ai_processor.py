@@ -142,6 +142,13 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     }
     """
 
+    # 三级容灾链: Pro(主力) -> Flash-Lite(快速备用) -> DeepSeek(独立配额兜底)
+    MODEL_CASCADE = [
+        {"name": "gemini-3.1-pro-preview",       "provider": "gemini"},
+        {"name": "gemini-3.1-flash-lite-preview", "provider": "gemini"},
+        {"name": "deepseek-chat",                 "provider": "deepseek"},
+    ]
+
     chunk_size = 4  # 每批4篇，降低每日API调用次数
     all_refined_news = []
 
@@ -149,6 +156,7 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     link_to_continent = {item.get('link'): item.get('continent', 'Other') for item in news_items}
 
     current_model_idx = 0  # 当前使用的模型在 MODEL_CASCADE 中的索引
+
 
     for i in range(0, len(news_items), chunk_size):
         chunk = news_items[i:i + chunk_size]
@@ -188,9 +196,15 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
 
             except Exception as e:
                 err_str = str(e)
-                # 检测配额耗尽 (429) 并切换到下一个模型
-                is_quota_error = "429" in err_str or "quota" in err_str.lower() or "rate limit" in err_str.lower()
-                if is_quota_error and current_model_idx < len(MODEL_CASCADE) - 1:
+                # 切换触发条件：配额超限(429) 或 模型不可用(404)
+                is_cascade_error = (
+                    "429" in err_str
+                    or "404" in err_str
+                    or "quota" in err_str.lower()
+                    or "rate limit" in err_str.lower()
+                    or "not found" in err_str.lower()
+                )
+                if is_cascade_error and current_model_idx < len(MODEL_CASCADE) - 1:
                     current_model_idx += 1
                     next_cfg = MODEL_CASCADE[current_model_idx]
                     print(f"     [配额耗尽/限速] 自动切换至备用模型: {next_cfg['name']} ({next_cfg['provider']})")
