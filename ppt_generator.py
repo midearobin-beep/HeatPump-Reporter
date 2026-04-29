@@ -1,6 +1,6 @@
 import os
 from pptx import Presentation
-from pptx.util import Inches, Pt
+from pptx.util import Inches, Pt, Cm
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from typing import List, Dict
@@ -143,6 +143,14 @@ def create_news_ppt(news_items: List[Dict], output_file: str = "Weekly_HeatPump_
                 data_table = item.get("data_table", {})
                 pic_height = Inches(2.0) if len(data_table) > 6 else Inches(2.8)
                 pic = slide1.shapes.add_picture(img_path, Inches(0.5), Inches(1.5), height=pic_height)
+
+                # ── 宽度上限：超过 13 cm 则等比例缩小 ──
+                MAX_IMG_WIDTH = Cm(13)
+                if pic.width > MAX_IMG_WIDTH:
+                    scale = MAX_IMG_WIDTH / pic.width
+                    pic.width  = MAX_IMG_WIDTH
+                    pic.height = int(pic.height * scale)
+
                 img_bottom = pic.top + pic.height
             except Exception as e:
                 print(f"Error adding image {img_path}: {e}")
