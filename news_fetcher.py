@@ -139,37 +139,83 @@ QUERIES = load_queries()
 
 def extract_og_image(url: str) -> str:
     """
-    Follows a news link and attempts to extract the `<meta property="og:image">` URL.
-    Returns empty string if failed.
+    三层图片提取链：
+    1. og:image meta 标签
+    2. twitter:image meta 标签
+    3. 页面正文中最大的 <img>（宽/高 >= 200px 以过滤图标）
+    任意一层成功即返回。
     """
     try:
-        # First, strictly decode the obscure Google News URL
-        real_url = url
-        try:
-            res = googlenewsdecoder.new_decoderv1(url)
-            if res and res.get('status'):
-                real_url = res.get('decoded_url')
-        except Exception:
-            pass
-
         headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
-        res = requests.get(real_url, headers=headers, timeout=10, allow_redirects=True)
+        res = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
         soup = BeautifulSoup(res.text, "html.parser")
-        og_img = soup.find("meta", property="og:image")
-        
-        if og_img and og_img.get("content"):
-            content_url = og_img["content"]
-            # Filter out blank placeholders or bad domains
-            if "googleusercontent.com" in content_url and "news.google.com" in real_url:
-                return ""
-            if content_url.endswith(".svg"):
-                return ""
-            return content_url
+        base_url = res.url  # actual URL after redirects
+
+        def _is_valid(img_url: str) -> bool:
+            if not img_url:
+                return False
+            if img_url.endswith(".svg"):
+                return False
+            if "googleusercontent.com" in img_url and "news.google.com" in url:
+                return False
+            # Must be absolute or resolvable
+            return True
+
+        def _abs(img_url: str) -> str:
+            """Make URL absolute."""
+            from urllib.parse import urljoin
+            return urljoin(base_url, img_url) if img_url else ""
+
+        # --- Layer 1: og:image ---
+        og = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "og:image"})
+        if og:
+            candidate = og.get("content", "")
+            if _is_valid(candidate):
+                return _abs(candidate)
+
+        # --- Layer 2: twitter:image ---
+        tw = soup.find("meta", attrs={"name": "twitter:image"}) or \
+             soup.find("meta", attrs={"property": "twitter:image"})
+        if tw:
+            candidate = tw.get("content", "")
+            if _is_valid(candidate):
+                return _abs(candidate)
+
+        # --- Layer 3: largest <img> in article body (min 200px) ---
+        best_img = None
+        best_area = 0
+        for img_tag in soup.find_all("img"):
+            src = img_tag.get("src") or img_tag.get("data-src") or img_tag.get("data-lazy-src", "")
+            if not src or not _is_valid(src):
+                continue
+            # Skip tiny icons
+            try:
+                w = int(img_tag.get("width", 0))
+                h = int(img_tag.get("height", 0))
+            except (ValueError, TypeError):
+                w, h = 0, 0
+            # Prioritize images with explicit large dimensions
+            if w >= 200 and h >= 100:
+                area = w * h
+                if area > best_area:
+                    best_area = area
+                    best_img = _abs(src)
+            # Also accept images without dimensions if they look like article photos
+            elif w == 0 and h == 0:
+                lsrc = src.lower()
+                if any(ext in lsrc for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                    if best_img is None:  # only use as last resort
+                        best_img = _abs(src)
+
+        if best_img:
+            return best_img
+
         return ""
     except Exception as e:
-        print(f"Failed to extract og:image for {url}: {e}")
+        print(f"Failed to extract image for {url}: {e}")
         return ""
 
 def extract_full_text(url: str) -> str:
@@ -263,3 +309,155 @@ if __name__ == "__main__":
     news = fetch_multilingual_news(days_back=7, max_results_per_lang=2)
     for n in news:
         print(f"[{n['published']}] ({n['language']}) {n['source']}: {n['title']}\nOriginal Image: {n['original_image_url']}\n")
+
+
+# ==========================================
+# 协会官网直抓 RSS 数据源
+# ==========================================
+
+# 各国热泵行业协会 RSS Feed 清单
+ASSOCIATION_FEEDS = [
+    # 欧洲 -------------------------------------------------------
+    {
+        "name": "EHPA (European Heat Pump Association)",
+        "url":  "https://www.ehpa.org/feed/",
+        "continent": "Europe",
+        "lang": "English (EHPA)",
+    },
+    {
+        "name": "ACR Journal (UK)",
+        "url":  "https://www.acrjournal.uk/feed/",
+        "continent": "Europe",
+        "lang": "English (UK)",
+    },
+    {
+        "name": "HVN Plus (UK)",
+        "url":  "https://www.hvnplus.co.uk/rss/",
+        "continent": "Europe",
+        "lang": "English (UK)",
+    },
+    {
+        "name": "Cooling Post (UK/Global)",
+        "url":  "https://www.coolingpost.com/feed/",
+        "continent": "Europe",
+        "lang": "English (UK)",
+    },
+    {
+        "name": "solarserver.de (Germany)",
+        "url":  "https://www.solarserver.de/feed/",
+        "continent": "Europe",
+        "lang": "German",
+    },
+    {
+        "name": "PV Magazine (International)",
+        "url":  "https://www.pv-magazine.com/feed/",
+        "continent": "Other",
+        "lang": "English (Global)",
+    },
+    # 北美 -------------------------------------------------------
+    {
+        "name": "ACHR News (US)",
+        "url":  "https://www.achrnews.com/rss/all",
+        "continent": "North America",
+        "lang": "English (US)",
+    },
+    {
+        "name": "HPBA (Heat Pump & HVAC, US)",
+        "url":  "https://www.hpba.org/feed/",
+        "continent": "North America",
+        "lang": "English (US)",
+    },
+    {
+        "name": "Canary Media (US Clean Energy)",
+        "url":  "https://www.canarymedia.com/feed",
+        "continent": "North America",
+        "lang": "English (US)",
+    },
+    # 亚太 -------------------------------------------------------
+    {
+        "name": "AIRAH (Australia HVAC)",
+        "url":  "https://www.airah.org.au/rss/",
+        "continent": "Oceania",
+        "lang": "English (Australia)",
+    },
+]
+
+
+def fetch_association_feeds(days_back: int = 3, max_per_feed: int = 5) -> List[Dict]:
+    """
+    从各国热泵行业协会 RSS 直接抓取最新新闻。
+    比 Google News 更及时、更权威，适合官方数据和政策发布。
+    """
+    cutoff_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days_back)
+    history_cache = load_history()
+    results = []
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; HeatPump-Reporter/1.0; +https://github.com/midearobin-beep/HeatPump-Reporter)"
+    }
+
+    for feed_cfg in ASSOCIATION_FEEDS:
+        print(f"Fetching association feed: {feed_cfg['name']}...")
+        try:
+            resp = requests.get(feed_cfg["url"], headers=headers, timeout=15)
+            if resp.status_code != 200:
+                print(f"  → HTTP {resp.status_code}, skipping.")
+                continue
+            feed = feedparser.parse(resp.content)
+        except Exception as e:
+            print(f"  → Failed to fetch {feed_cfg['url']}: {e}")
+            continue
+
+        count = 0
+        for entry in feed.entries:
+            if count >= max_per_feed:
+                break
+            try:
+                # Parse publish date
+                pub_str = getattr(entry, "published", None) or getattr(entry, "updated", None)
+                if pub_str:
+                    from email.utils import parsedate_to_datetime
+                    try:
+                        pub_date = parsedate_to_datetime(pub_str)
+                    except Exception:
+                        import dateutil.parser
+                        pub_date = dateutil.parser.parse(pub_str)
+                    if pub_date.tzinfo is None:
+                        pub_date = pub_date.replace(tzinfo=datetime.timezone.utc)
+                else:
+                    pub_date = datetime.datetime.now(datetime.timezone.utc)
+
+                if pub_date < cutoff_date:
+                    continue
+
+                link = entry.get("link", "")
+                if not link or link in history_cache:
+                    continue
+
+                history_cache.append(link)
+
+                # 提取图片
+                og_image_url = extract_og_image(link)
+
+                # 提取全文
+                full_text = extract_full_text(link)
+                fallback = getattr(entry, "summary", "")
+                final_content = full_text if full_text else fallback
+
+                results.append({
+                    "title": entry.get("title", ""),
+                    "link":  link,
+                    "published": pub_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    "source": feed_cfg["name"],
+                    "language": feed_cfg["lang"],
+                    "continent": detect_continent_from_url(link, fallback=feed_cfg["continent"]),
+                    "original_image_url": og_image_url,
+                    "summary": final_content,
+                })
+                count += 1
+            except Exception as e:
+                print(f"  → Error parsing entry: {e}")
+
+    save_history(history_cache)
+    print(f"\n协会官网: 共抓取 {len(results)} 篇新文章。")
+    return results
