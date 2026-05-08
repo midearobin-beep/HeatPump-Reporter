@@ -2,7 +2,7 @@ import os
 import datetime
 from news_fetcher import fetch_multilingual_news, fetch_association_feeds
 from ai_processor import refine_news_with_ai
-from image_fetcher import fetch_image, download_original_image
+from image_fetcher import download_original_image
 from ppt_generator import create_news_ppt
 
 def main():
@@ -28,26 +28,14 @@ def main():
     refined_news = refine_news_with_ai(raw_news)
     print(f"   => AI 处理完成，保留了 {len(refined_news)} 篇高价值见解。")
     
-    print("\n3. 正在自动匹配图片物料...")
+    print("\n3. 正在匹配新闻配图...")
     os.makedirs("assets", exist_ok=True)
     for idx, item in enumerate(refined_news):
-        print(f"   - 正在为 '{item.get('headline')}' 获取配图...")
         img_path = f"assets/news_img_{idx}.png"
-        
-        # Priority 1: Original Image
         og_url = item.get("original_image_url")
-        success = False
-        if og_url:
-            print(f"     -> 发现原始新闻头图，尝试下载...")
-            success = download_original_image(og_url, img_path)
-            
-        # Priority 2: AI Generated Image
-        if not success:
-            print(f"     -> 使用 MiniMax 开始 AI 作图...")
-            analysis_data = item.get("analysis", {})
-            fetch_image(analysis_data, img_path)
-            
-        item['image_path'] = img_path
+        if og_url and download_original_image(og_url, img_path):
+            item["image_path"] = img_path
+        # 无图则不设 image_path，PPT 生成器会跳过图片位置
 
     print("\n4. 正在合成排版 PPT...")
     now = datetime.datetime.now()
