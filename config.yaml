@@ -4,58 +4,84 @@
 
 queries:
   # --- 欧洲 (Europe) ---
-  - query: '("Heat pump" OR "HVAC") AND ("subsidy" OR "policy" OR "regulation")'
+  - query: '("Heat pump" OR "HVAC") AND ("subsidy" OR "policy" OR "regulation" OR "market" OR "launch" OR "new product" OR "release" OR "innovation") -car -vehicle -auto -automotive -"electric vehicle" -EV'
     lang: "English (UK/EU/International)"
     params: "&hl=en-GB&gl=GB&ceid=GB:en"
     continent: "Europe"
 
-  - query: '("Wärmepumpe") AND ("Förderung" OR "Richtlinie" OR "Markt" OR "Verbot")'
+  - query: '("Wärmepumpe") AND ("Förderung" OR "Richtlinie" OR "Markt" OR "Verbot" OR "Einführung" OR "neues Produkt" OR "Innovation") -Auto -Fahrzeug -PKW -Kfz'
     lang: "German (Germany/Austria)"
     params: "&hl=de&gl=DE&ceid=DE:de"
     continent: "Europe"
 
-  - query: '("pompe à chaleur") AND ("subvention" OR "politique" OR "marché")'
+  - query: '("pompe à chaleur") AND ("subvention" OR "politique" OR "marché" OR "lancement" OR "nouveau produit" OR "innovation") -voiture -véhicule -auto -automobile'
     lang: "French (France)"
     params: "&hl=fr&gl=FR&ceid=FR:fr"
     continent: "Europe"
 
-  - query: '("pompa di calore") AND ("incentivi" OR "sussidi" OR "politica" OR "mercato")'
+  - query: '("pompa di calore") AND ("incentivi" OR "sussidi" OR "politica" OR "mercato" OR "lancio" OR "nuovo prodotto" OR "innovazione") -auto -veicolo -vettura -automobile'
     lang: "Italian (Italy)"
     params: "&hl=it&gl=IT&ceid=IT:it"
     continent: "Europe"
 
-  - query: '("bomba de calor") AND ("subvención" OR "política" OR "mercato")'
+  - query: '("bomba de calor") AND ("subvención" OR "política" OR "mercado" OR "lanzamiento" OR "nuevo producto" OR "innovación") -coche -vehículo -auto -automóvil'
     lang: "Spanish (Spain)"
     params: "&hl=es&gl=ES&ceid=ES:es"
     continent: "Europe"
 
-  - query: '("warmtepomp") AND ("subsidie" OR "beleid" OR "markt")'
+  - query: '("warmtepomp") AND ("subsidie" OR "beleid" OR "markt" OR "lancering" OR "nieuw product" OR "innovatie") -auto -voertuig -wagen'
     lang: "Dutch (Netherlands)"
     params: "&hl=nl&gl=NL&ceid=NL:nl"
     continent: "Europe"
 
-  - query: '("αντλία θερμότητας") AND ("επιδότηση" OR "αγορά")'
+  - query: '("αντλία θερμότητας") AND ("επιδότηση" OR "αγορά" OR "νέο προϊόν" OR "καινοτομία") -αυτοκίνητο -όχημα'
     lang: "Greek (Greece)"
     params: "&hl=el&gl=GR&ceid=GR:el"
     continent: "Europe"
 
+  # --- 欧洲扩展语言 (Expanded Europe) ---
+  - query: '("pompa ciepła") AND ("dotacja" OR "polityka" OR "rynek" OR "premiera" OR "nowy produkt" OR "innowacja") -samochód -pojazd -auto'
+    lang: "Polish (Poland)"
+    params: "&hl=pl&gl=PL&ceid=PL:pl"
+    continent: "Europe"
+
+  - query: '("värmepump") AND ("subvention" OR "politik" OR "marknad" OR "lansering" OR "ny produkt" OR "innovation") -bil -fordon -auto'
+    lang: "Swedish (Sweden)"
+    params: "&hl=sv&gl=SE&ceid=SE:sv"
+    continent: "Europe"
+
+  - query: '("varmepumpe") AND ("tilskud" OR "politik" OR "marked" OR "lancering" OR "nyt produkt" OR "innovation") -bil -køretøj -auto'
+    lang: "Danish (Denmark)"
+    params: "&hl=da&gl=DK&ceid=DK:da"
+    continent: "Europe"
+
+  - query: '("varmepumpe") AND ("støtte" OR "politikk" OR "marked" OR "lansering" OR "nytt produkt" OR "innovasjon") -bil -kjøretøy -auto'
+    lang: "Norwegian (Norway)"
+    params: "&hl=no&gl=NO&ceid=NO:no"
+    continent: "Europe"
+
+  - query: '("lämpöpumppu") AND ("tuki" OR "politiikka" OR "markkinat" OR "lanseeraus" OR "uusi tuote" OR "innovaatio") -auto -ajoneuvo'
+    lang: "Finnish (Finland)"
+    params: "&hl=fi&gl=FI&ceid=FI:fi"
+    continent: "Europe"
+
   # --- 亚洲 (Asia) ---
-  - query: '("Heat pump") AND ("policy" OR "market" OR "incentive")'
+  - query: '("Heat pump") AND ("policy" OR "market" OR "incentive" OR "launch" OR "new product") -car -vehicle -auto -EV'
     lang: "English (India)"
     params: "&hl=en-IN&gl=IN&ceid=IN:en"
     continent: "Asia"
 
-  - query: '("тепловой насос") AND ("субсидия" OR "рынок" OR "энергоэффективность")'
+  - query: '("тепловой насос") AND ("субсидия" OR "рынок" OR "энергоэффективность" OR "запуск" OR "новый продукт") -автомобиль -машина -авто'
     lang: "Russian (Russia/CIS)"
     params: "&hl=ru&gl=RU&ceid=RU:ru"
     continent: "Asia"
 
-  - query: '("ısı pompası") AND ("destek" OR "pazar" OR "teşvik")'
+  - query: '("ısı pompası") AND ("destek" OR "pazar" OR "teşvik" OR "lansman" OR "yeni ürün") -araç -araba -otomobil'
     lang: "Turkish (Turkey)"
     params: "&hl=tr&gl=TR&ceid=TR:tr"
     continent: "Asia"
 
-  - query: '("bơm nhiệt") AND ("thị trường" OR "chính sách")'
+  - query: '("bơm nhiệt") AND ("thị trường" OR "chính sách" OR "ra mắt" OR "sản phẩm mới") -ô tô -xe hơi -xe'
     lang: "Vietnamese (SEA/Vietnam)"
     params: "&hl=vi&gl=VN&ceid=VN:vi"
     continent: "Asia"
@@ -66,17 +92,17 @@ queries:
     continent: "Asia"
 
   # --- 其他地区 (Oceania/Americas) ---
-  - query: '("Heat pump") AND ("rebate" OR "regulation" OR "market")'
+  - query: '("Heat pump") AND ("rebate" OR "regulation" OR "market" OR "launch" OR "new product") -car -vehicle -auto -EV'
     lang: "English (Australia)"
     params: "&hl=en-AU&gl=AU&ceid=AU:en"
     continent: "Oceania"
 
-  - query: '("bomba de calor") AND ("mercado" OR "eficiência energética")'
+  - query: '("bomba de calor") AND ("mercado" OR "eficiência energética" OR "lançamento" OR "novo produto") -carro -veículo -auto'
     lang: "Portuguese (Brazil)"
     params: "&hl=pt-BR&gl=BR&ceid=BR:pt"
     continent: "South America"
 
-  - query: '("Heat pump" OR "HVAC") AND ("subsidy" OR "policy" OR "tax credit")'
+  - query: '("Heat pump" OR "HVAC") AND ("subsidy" OR "policy" OR "tax credit" OR "launch" OR "new product" OR "innovation") -car -vehicle -auto -automotive -"electric vehicle" -EV'
     lang: "English (US/North America)"
     params: "&hl=en-US&gl=US&ceid=US:en"
     continent: "North America"
