@@ -79,7 +79,7 @@ def _call_model(model_cfg: dict, system_prompt: str, user_content: str) -> str:
 
         client = OpenAI(
             api_key=kimi_key,
-            base_url="https://api.moonshot.cn/v1",
+            base_url="https://api.kimi.com/coding/v1",
         )
         response = client.chat.completions.create(
             model=model_name,
@@ -167,11 +167,11 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     """
 
     # 三级容灾链
-    # [1] Kimi Coding (kimi-k2.6) - 主力，额度多
+    # [1] Kimi Coding (kimi-for-coding) - 主力，额度多
     # [2] DeepSeek V4 Pro   - 二备
     # [3] DeepSeek V4 Flash - 三备兜底
     MODEL_CASCADE = [
-        {"name": "kimi-k2.6",                "provider": "kimi"},
+        {"name": "kimi-for-coding",          "provider": "kimi"},
         {"name": "deepseek-v4-pro",          "provider": "deepseek"},
         {"name": "deepseek-v4-flash",        "provider": "deepseek"},
     ]
