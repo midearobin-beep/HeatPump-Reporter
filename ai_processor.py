@@ -201,15 +201,17 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
 
             except Exception as e:
                 err_str = str(e)
-                # 切换触发条件：配额超限(429) | 模型不可用(404) | 服务超时(503/504) | 连接失败
+                # 切换触发条件：配额超限(429) | 模型不可用(404/400) | 服务超时(503/504) | 连接失败 | 区域限制
                 is_cascade_error = (
                     "429" in err_str
                     or "404" in err_str
+                    or "400" in err_str
                     or "503" in err_str
                     or "504" in err_str
                     or "quota" in err_str.lower()
                     or "rate limit" in err_str.lower()
                     or "not found" in err_str.lower()
+                    or "location" in err_str.lower()
                     or "connection error" in err_str.lower()
                     or "deadline" in err_str.lower()
                     or "timeout" in err_str.lower()
