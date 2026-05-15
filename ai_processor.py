@@ -90,7 +90,7 @@ def _call_model(model_cfg: dict, system_prompt: str, user_content: str) -> str:
             ]
         }
         
-        resp = requests.post(url, headers=headers, json=data)
+        resp = requests.post(url, headers=headers, json=data, timeout=120)
         if resp.status_code != 200:
             raise RuntimeError(f"Kimi API Error: {resp.status_code} - {resp.text}")
             
