@@ -195,10 +195,15 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
         chunk = news_items[i:i + chunk_size]
         input_data = json.dumps(chunk, ensure_ascii=False, indent=2)
 
-        max_retries = 3
+        max_attempts = 5
+        attempt = 0
         chunk_success = False
 
-        for attempt in range(1, max_retries + 1):
+        while attempt < max_attempts:
+            attempt += 1
+            if current_model_idx >= len(MODEL_CASCADE):
+                break
+                
             model_cfg = MODEL_CASCADE[current_model_idx]
             model_name = model_cfg["name"]
             total_batches = (len(news_items) + chunk_size - 1) // chunk_size
@@ -228,24 +233,17 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
                 break
 
             except Exception as e:
-                err_str = str(e)
+                err_str = str(e).lower()
                 # 切换触发条件：配额超限(429) | 模型不可用(404/400) | 鉴权失败(401) | 服务超时(503/504) | 连接失败 | 区域限制
                 is_cascade_error = (
-                    "429" in err_str
-                    or "404" in err_str
-                    or "400" in err_str
-                    or "401" in err_str
-                    or "503" in err_str
-                    or "504" in err_str
-                    or "quota" in err_str.lower()
-                    or "rate limit" in err_str.lower()
-                    or "not found" in err_str.lower()
-                    or "location" in err_str.lower()
-                    or "authentication" in err_str.lower()
-                    or "connection error" in err_str.lower()
-                    or "deadline" in err_str.lower()
-                    or "timeout" in err_str.lower()
-                    or "handshak" in err_str.lower()
+                    "429" in err_str or "404" in err_str or "400" in err_str or "401" in err_str
+                    or "503" in err_str or "504" in err_str or "quota" in err_str
+                    or "rate limit" in err_str or "not found" in err_str
+                    or "location" in err_str or "authentication" in err_str
+                    or "connection" in err_str or "deadline" in err_str
+                    or "timeout" in err_str or "handshak" in err_str
+                    or "remote end closed" in err_str or "aborted" in err_str
+                    or "remotedisconnected" in err_str or "invalid_authentication_error" in err_str
                 )
                 if is_cascade_error and current_model_idx < len(MODEL_CASCADE) - 1:
                     current_model_idx += 1
