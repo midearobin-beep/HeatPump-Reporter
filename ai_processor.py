@@ -67,6 +67,30 @@ def _call_model(model_cfg: dict, system_prompt: str, user_content: str) -> str:
         )
         return response.choices[0].message.content.strip()
 
+    elif provider == "kimi":
+        try:
+            from openai import OpenAI
+        except ImportError:
+            raise RuntimeError("openai package not installed. Run: pip install openai")
+
+        kimi_key = os.getenv("KIMI_API_KEY")
+        if not kimi_key:
+            raise RuntimeError("KIMI_API_KEY not set in .env")
+
+        client = OpenAI(
+            api_key=kimi_key,
+            base_url="https://api.moonshot.cn/v1",
+        )
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": f"Input Data:\n{user_content}"},
+            ],
+            temperature=0.3,
+        )
+        return response.choices[0].message.content.strip()
+
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
@@ -142,10 +166,12 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     }
     """
 
-    # 二级容灾链 (全 DeepSeek 阵列)
-    # [1] DeepSeek V4 Pro   - 主力，1M上下文，极强分析能力
-    # [2] DeepSeek V4 Flash - 兜底，轻量快速，成本最低
+    # 三级容灾链
+    # [1] Kimi Coding (moonshot-v1-32k) - 主力，额度多
+    # [2] DeepSeek V4 Pro   - 二备
+    # [3] DeepSeek V4 Flash - 三备兜底
     MODEL_CASCADE = [
+        {"name": "moonshot-v1-32k",          "provider": "kimi"},
         {"name": "deepseek-v4-pro",          "provider": "deepseek"},
         {"name": "deepseek-v4-flash",        "provider": "deepseek"},
     ]
