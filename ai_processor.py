@@ -172,12 +172,10 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     }
     """
 
-    # 三级容灾链
-    # [1] Kimi Coding (kimi-for-coding) - 主力，额度多
-    # [2] DeepSeek V4 Pro   - 二备
-    # [3] DeepSeek V4 Flash - 三备兜底
+    # 二级容灾链
+    # [1] DeepSeek V4 Pro   - 主力
+    # [2] DeepSeek V4 Flash - 兜底
     MODEL_CASCADE = [
-        {"name": "kimi-for-coding",          "provider": "kimi"},
         {"name": "deepseek-v4-pro",          "provider": "deepseek"},
         {"name": "deepseek-v4-flash",        "provider": "deepseek"},
     ]
