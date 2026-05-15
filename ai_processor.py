@@ -68,28 +68,34 @@ def _call_model(model_cfg: dict, system_prompt: str, user_content: str) -> str:
         return response.choices[0].message.content.strip()
 
     elif provider == "kimi":
-        try:
-            from openai import OpenAI
-        except ImportError:
-            raise RuntimeError("openai package not installed. Run: pip install openai")
-
+        import requests
+        
         kimi_key = os.getenv("KIMI_API_KEY")
         if not kimi_key:
             raise RuntimeError("KIMI_API_KEY not set in .env")
 
-        client = OpenAI(
-            api_key=kimi_key,
-            base_url="https://api.kimi.com/coding/v1",
-        )
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": f"Input Data:\n{user_content}"},
-            ],
-            temperature=0.3,
-        )
-        return response.choices[0].message.content.strip()
+        url = "https://api.kimi.com/coding/v1/messages"
+        headers = {
+            "x-api-key": kimi_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "User-Agent": "ClaudeCode/1.0"
+        }
+        data = {
+            "model": model_name,
+            "max_tokens": 8192,
+            "system": system_prompt,
+            "messages": [
+                {"role": "user", "content": f"Input Data:\n{user_content}"}
+            ]
+        }
+        
+        resp = requests.post(url, headers=headers, json=data)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Kimi API Error: {resp.status_code} - {resp.text}")
+            
+        resp_json = resp.json()
+        return resp_json["content"][0]["text"].strip()
 
     else:
         raise ValueError(f"Unknown provider: {provider}")
