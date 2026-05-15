@@ -142,15 +142,11 @@ def refine_news_with_ai(news_items: List[Dict]) -> List[Dict]:
     }
     """
 
-    # 四级容灾链 (按质量 + 配额独立性排序)
-    # [1] Gemini 3.1 Pro    - 主力，最高情报质量，250次/天配额
-    # [2] DeepSeek V4 Pro   - 高质量二备，独立配额，1M上下文，1.6T参数
-    # [3] Gemini 2.5 Pro    - 三备，Gemini高质量备用
-    # [4] DeepSeek V4 Flash - 最终兜底，轻量快速，成本最低
+    # 二级容灾链 (全 DeepSeek 阵列)
+    # [1] DeepSeek V4 Pro   - 主力，1M上下文，极强分析能力
+    # [2] DeepSeek V4 Flash - 兜底，轻量快速，成本最低
     MODEL_CASCADE = [
-        {"name": "gemini-3.1-pro-preview",  "provider": "gemini"},
         {"name": "deepseek-v4-pro",          "provider": "deepseek"},
-        {"name": "gemini-2.5-pro",           "provider": "gemini"},
         {"name": "deepseek-v4-flash",        "provider": "deepseek"},
     ]
 
